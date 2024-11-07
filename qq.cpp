@@ -1,3 +1,4 @@
+
 #include <iostream>
 #include <fstream>
 #include <ctime>
@@ -31,7 +32,6 @@ double stringToDouble(const string &str)
     return result;
 }
 
-// Helper function to convert string to int
 int stringToInt(const string &str)
 {
     int result = 0;
@@ -111,18 +111,13 @@ public:
     }
     int seed_generator()
     {
-        int seed = 232572; // Replace with your actual seed
+        int seed = 232572;
 
-        srand(seed);                 // Initialize random seed
-        int randNum = rand() % 1001; // Generate a random number from 0 to 1000
-
-        // Get the last two digits of the seed number
+        srand(seed);
+        int randNum = rand() % 1001;
         int lastTwoDigits = (seed % 100);
-
-        // Calculate the comparison value
         int compareValue = (lastTwoDigits * 10) + 100;
 
-        // Return the result of comparison if needed
         if (randNum < compareValue)
         {
             return randNum;
@@ -228,10 +223,126 @@ public:
         cout << "Preorder Traversal of Game Tree:" << endl;
         preorderTraversal(root);
     }
+
+    game_node *search_game(game_node *node, const string &game_id)
+    {
+        if (node == nullptr || node->game_id == game_id)
+            return node;
+
+        if (game_id < node->game_id)
+            return search_game(node->left, game_id);
+        else
+            return search_game(node->right, game_id);
+    }
+
+    game_node *search_game(const string &game_id)
+    {
+        return search_game(root, game_id);
+    }
+
+    game_node *delete_game(game_node *node, const string &game_id)
+    {
+        if (node == nullptr)
+            return node;
+
+        if (game_id < node->game_id)
+            node->left = delete_game(node->left, game_id);
+        else if (game_id > node->game_id)
+            node->right = delete_game(node->right, game_id);
+        else
+        {
+            // Case 1
+            if (node->left == nullptr && node->right == nullptr)
+            {
+                delete node;
+                node = nullptr;
+            }
+            // Case 2
+            else if (node->left == nullptr)
+            {
+                game_node *temp = node;
+                node = node->right;
+                delete temp;
+            }
+            else if (node->right == nullptr)
+            {
+                game_node *temp = node;
+                node = node->left;
+                delete temp;
+            }
+            // cas 3
+            else
+            {
+                game_node *temp = minValueNode(node->right);
+                node->game_id = temp->game_id;
+                node->name = temp->name;
+                node->developer = temp->developer;
+                node->publisher = temp->publisher;
+                node->file_size_in_GB = temp->file_size_in_GB;
+                node->downloads = temp->downloads;
+
+                node->right = delete_game(node->right, temp->game_id);
+            }
+        }
+        return node;
+    }
+
+    void delete_game(const string &game_id)
+    {
+        root = delete_game(root, game_id);
+    }
+
+    game_node *minValueNode(game_node *node)
+    {
+        game_node *current = node;
+        while (current && current->left != nullptr)
+            current = current->left;
+        return current;
+    }
+    void saveToFile(game_node *node, ofstream &file)
+    {
+        if (node == nullptr)
+            return;
+
+        file << node->game_id << "," << node->name << "," << node->developer << ","
+             << node->publisher << "," << node->file_size_in_GB << "," << node->downloads << endl;
+
+        saveToFile(node->left, file);
+        saveToFile(node->right, file);
+    }
+
+    void saveToFile()
+    {
+        ofstream file;
+        file.open("games_data.csv");
+
+        if (!file)
+        {
+            cout << "Error opening file for saving." << endl;
+            return;
+        }
+
+        saveToFile(root, file);
+
+        file.close();
+    }
 };
 int main()
 {
     gamess obj;
     obj.readfile();
+    string search_id = "3468322375";
+    game_node *found_game = obj.search_game(search_id);
+    if (found_game)
+        cout << "Game found: " << found_game->name << endl;
+    else
+        cout << "Game not found!" << endl;
+
+    string delete_id = "3468322375";
+    obj.delete_game(delete_id);
+    cout << "Game with ID " << delete_id << " deleted." << endl;
+
     obj.preorderTraversal();
+    obj.saveToFile();
+    cout << "Data saved to CSV file!" << endl;
 }
